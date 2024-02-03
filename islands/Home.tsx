@@ -82,7 +82,7 @@ export default function Home() {
 	return (
 		<div class="m-3">
 			<div class="flex flex-row justify-between">
-				<h1 class="text-xl">InfiniteCraftTogether v2</h1>
+				<h1 class="text-xl">InfiniteCraftTogether v2.1</h1>
 				<h2>
 					Connected: {status.value === ConnectionStatus.CONNECTED ? "Yes" : "No"}
 				</h2>
@@ -93,10 +93,10 @@ export default function Home() {
 					<button class="ml-2" onClick={() => discovery.value = undefined}>X</button>
 				</p>
 			}
-			<ul>
+			<div class="flex flex-wrap">
 				{stateDisplay.value?.map(noun => (
-					<li
-						class="cursor-pointer hover:bg-gray-100 p-2 rounded-md m-1"
+					<div
+						class="cursor-pointer hover:bg-gray-100 py-1 px-2 rounded-md m-1 w-fit border border-gray-400"
 						key={noun.name}
 						onClick={() => nounClicked(noun)}
 						style={{
@@ -108,9 +108,9 @@ export default function Home() {
 
 						{ noun.emoji } { noun.name }
 
-					</li>
+					</div>
 				))}
-			</ul>
+			</div>
 		</div>
 	);
 }
