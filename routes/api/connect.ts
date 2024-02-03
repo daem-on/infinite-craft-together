@@ -1,4 +1,5 @@
 import { getPair } from "../../providers/nealfun.ts";
+import { ulid } from "https://deno.land/x/ulid@v0.3.0/mod.ts";
 
 const db = await Deno.openKv();
 
@@ -29,7 +30,8 @@ function sendMessage(socket: WebSocket, message: ServerMessage) {
 	socket.send(JSON.stringify(message));
 }
 
-const listKey = ["nouns"];
+const dbVersion = 1;
+const listName = "nouns";
 const updateKey = ["update"];
 
 class AsyncReader<T> {
@@ -68,14 +70,34 @@ export const handler = async (req: Request): Promise<Response> => {
 	return response;
 }
 
-async function readList() {
-	return await Array.fromAsync(db.list<Noun>({ prefix: listKey }));
+/** Set of existing nouns, shared across clients */
+const existing = new Set<string>();
+
+async function readList(after: string) {
+	return await Array.fromAsync(db.list<Noun>({
+		prefix: [listName],
+		start: [listName, after]
+	}));
 }
 
 async function storeNoun(noun: Noun) {
-	await db.set([...listKey, noun.name], noun);
-	await db.set(updateKey, [Date.now()]);
+	const now = ulid();
+	await db.set([listName, now], noun);
+	await db.set(updateKey, [now]);
 }
+
+async function ensureDbVersion() {
+	const version = await db.get<number>(["version"]);
+	if (version.value !== dbVersion) {
+		console.log("Database version mismatch, clearing database");
+		const all = db.list({ prefix: [] })
+		for await (const entry of all) {
+			await db.delete(entry.key);
+		}
+		await db.set(["version"], dbVersion);
+	}
+}
+await ensureDbVersion();
 
 function seedDb() {
 	return Promise.all([
@@ -86,27 +108,37 @@ function seedDb() {
 	].map(storeNoun));
 }
 
-async function initServer(socket: WebSocket, _url: URL) {
-	const initialList = await readList();
-	const state = new Map(initialList.map(entry => [entry.value.name, entry.value]));
+const list = await readList("");
+if (list.length === 0) {
+	console.log("Seeding database");
+	await seedDb();
+}
 
-	if (initialList.length === 0) {
-		await seedDb();
+async function initServer(socket: WebSocket, _url: URL) {
+	const initialList = await readList("");
+	let lastUpdate = ulid();
+
+	if (existing.size < initialList.length) {
+		for (const entry of initialList) {
+			existing.add(entry.value.name);
+		}
 	}
 
 	sendMessage(socket, { type: "add", nouns: initialList.map(entry => entry.value) });
 	
-	const updateReader = new AsyncReader(db.watch<[number]>([updateKey]));
+	const updateReader = new AsyncReader(db.watch([updateKey]));
 	updateReader.start(async () => {
-		const list = await readList();
-		const added = [];
-		for (const entry of list) {
-			if (!state.has(entry.value.name)) {
-				state.set(entry.value.name, entry.value);
-				added.push(entry.value);
+		const added = await readList(lastUpdate);
+		lastUpdate = ulid();
+		if (added.length > 0) {
+			sendMessage(socket, {
+				type: "add",
+				nouns: added.map(entry => entry.value)
+			});
+			for (const entry of added) {
+				existing.add(entry.value.name);
 			}
 		}
-		if (added.length > 0) sendMessage(socket, { type: "add", nouns: added });
 	});
 
 	socket.onmessage = async event => {
@@ -114,7 +146,8 @@ async function initServer(socket: WebSocket, _url: URL) {
 		if (message.type === "pair") {
 			const response = await getPair(message.first, message.second);
 			const noun = { name: response.result, emoji: response.emoji };
-			if (!state.has(response.result)) {
+			if (!existing.has(response.result)) {
+				existing.add(response.result);
 				await storeNoun(noun);
 				sendMessage(socket, {
 					type: "discovery",
