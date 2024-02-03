@@ -96,7 +96,7 @@ export default function Home() {
 			<div class="flex flex-wrap">
 				{stateDisplay.value?.map(noun => (
 					<div
-						class="cursor-pointer hover:bg-gray-100 py-1 px-2 rounded-md m-1 w-fit border border-gray-400"
+						class="cursor-pointer hover:bg-gray-100 py-1 px-2 rounded-md m-1 w-fit border border-gray-400 select-none"
 						key={noun.name}
 						onClick={() => nounClicked(noun)}
 						style={{
