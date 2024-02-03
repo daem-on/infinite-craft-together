@@ -130,7 +130,10 @@ async function initServer(socket: WebSocket, _url: URL) {
 		}
 	};
 
-	socket.onclose = () => {
+	const cleanup = () => {
 		updateReader.cancel();
+		socket.close();
 	};
+
+	socket.onclose = socket.onerror = cleanup;
 }

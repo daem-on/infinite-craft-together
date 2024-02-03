@@ -44,8 +44,8 @@ function connect() {
 		}
 	}
 
-	ws.onclose = ev => {
-		console.log("disconnected", ev.code, ev.reason);
+	ws.onclose = ws.onerror = ev => {
+		console.log("disconnected", ev);
 		status.value = ConnectionStatus.DISCONNECTED;
 		ws = undefined;
 	}
@@ -88,8 +88,9 @@ export default function Home() {
 				</h2>
 			</div>
 			{
-				discovery.value && <p class="text-sm border-1 rounded-md p-2 bg-gray-100">
-					{discovery.value}
+				discovery.value && <p class="text-sm border-1 rounded-md p-2 bg-gray-100 sticky top-0 flex flex-row justify-between">
+					{ discovery.value }
+					<button class="ml-2" onClick={() => discovery.value = undefined}>X</button>
 				</p>
 			}
 			<ul>
