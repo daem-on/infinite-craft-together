@@ -82,7 +82,7 @@ export default function Home() {
 	return (
 		<div class="m-3">
 			<div class="flex flex-row justify-between">
-				<h1 class="text-xl">InfiniteCraftTogether v1</h1>
+				<h1 class="text-xl">InfiniteCraftTogether v2</h1>
 				<h2>
 					Connected: {status.value === ConnectionStatus.CONNECTED ? "Yes" : "No"}
 				</h2>
