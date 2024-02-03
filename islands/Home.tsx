@@ -13,6 +13,7 @@ const status = signal<ConnectionStatus>(ConnectionStatus.CONNECTING);
 const stateDisplay = signal<Noun[] | undefined>(undefined);
 const selectedNoun = signal<Noun | undefined>(undefined);
 const discovery = signal<string | undefined>(undefined);
+const highlighted = signal<Noun | undefined>(undefined);
 
 let ws: WebSocket | undefined;
 
@@ -37,7 +38,16 @@ function connect() {
 			stateDisplay.value = Array.from(state.values());
 		} else if (message.type === "discovery") {
 			discovery.value = `Discovered ${ message.noun.emoji } ${message.noun.name}! (${message.scope})`;
+			highlighted.value = message.noun;
+		} else if (message.type === "existing") {
+			highlighted.value = message.noun;
 		}
+	}
+
+	ws.onclose = ev => {
+		console.log("disconnected", ev.code, ev.reason);
+		status.value = ConnectionStatus.DISCONNECTED;
+		ws = undefined;
 	}
 }
 
@@ -58,6 +68,12 @@ function nounClicked(noun: Noun) {
 		selectedNoun.value = undefined;
 		pair(selected, noun);
 	}
+}
+
+function getBackgroundColor(selected: boolean, highlighted: boolean) {
+	if (selected) return "#ffcc00";
+	if (highlighted) return "#f0f0f0";
+	return "white";
 }
 
 export default function Home() {
@@ -82,7 +98,12 @@ export default function Home() {
 						class="cursor-pointer hover:bg-gray-100 p-2 rounded-md m-1"
 						key={noun.name}
 						onClick={() => nounClicked(noun)}
-						style={{ color: selectedNoun.value === noun ? "red" : "black" }}>
+						style={{
+							background: getBackgroundColor(
+								noun.name === selectedNoun.value?.name,
+								noun.name === highlighted.value?.name
+							)
+						}}>
 
 						{ noun.emoji } { noun.name }
 

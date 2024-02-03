@@ -9,6 +9,9 @@ export type ServerMessage = {
 	type: "discovery";
 	noun: Noun;
 	scope: "global" | "local";
+} | {
+	type: "existing";
+	noun: Noun;
 };
 
 export type ClientMessage = {
@@ -110,15 +113,24 @@ async function initServer(socket: WebSocket, _url: URL) {
 		const message = JSON.parse(event.data) as ClientMessage;
 		if (message.type === "pair") {
 			const response = await getPair(message.first, message.second);
+			const noun = { name: response.result, emoji: response.emoji };
 			if (!state.has(response.result)) {
-				const noun = { name: response.result, emoji: response.emoji };
 				await storeNoun(noun);
 				sendMessage(socket, {
 					type: "discovery",
 					scope: response.isNew ? "global" : "local",
 					noun,
 				});
+			} else {
+				sendMessage(socket, {
+					type: "existing",
+					noun,
+				});
 			}
 		}
+	};
+
+	socket.onclose = () => {
+		updateReader.cancel();
 	};
 }
