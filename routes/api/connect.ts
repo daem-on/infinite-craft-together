@@ -27,6 +27,7 @@ export type Noun = {
 }
 
 function sendMessage(socket: WebSocket, message: ServerMessage) {
+	if (socket.readyState !== WebSocket.OPEN) return;
 	socket.send(JSON.stringify(message));
 }
 
@@ -108,8 +109,8 @@ function seedDb() {
 	].map(storeNoun));
 }
 
-const list = await readList("");
-if (list.length === 0) {
+const iterator = db.list({ prefix: [listName] }, { limit: 1 });
+if ((await iterator.next()).done) {
 	console.log("Seeding database");
 	await seedDb();
 }
