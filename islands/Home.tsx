@@ -11,8 +11,7 @@ const isServerSide = typeof location === "undefined";
 
 const status = signal<ConnectionStatus>(ConnectionStatus.CONNECTING);
 const stateDisplay = signal<Noun[] | undefined>(undefined);
-const selectedNoun = signal<Noun | undefined>(undefined);
-const selected2Noun = signal<Noun | undefined>(undefined);
+const selectedNouns = signal<(Noun | undefined)[] | undefined>(undefined);
 const discovery = signal<string | undefined>(undefined);
 const highlighted = signal<Noun | undefined>(undefined);
 
@@ -62,17 +61,20 @@ function pair(first: Noun, second: Noun) {
 }
 
 function nounClicked(noun: Noun) {
-	const selected = selectedNoun.value;
-	if (selected === undefined || selected2Noun.value !== undefined) {
-		selectedNoun.value = noun;
-		selected2Noun.value = undefined;
+	const selected = selectedNouns.value?.[0];
+	if (selected === undefined || selectedNouns.value?.[1] !== undefined) {
+		// First noun selected
+		highlighted.value = undefined;
+		selectedNouns.value = [noun, undefined];
 	} else {
-		selected2Noun.value = noun;
+		// Second noun selected
+		selectedNouns.value = [selected, noun];
 		pair(selected, noun);
 	}
 }
 
 function getBackgroundColor(selected: boolean, highlighted: boolean) {
+	if (selected && highlighted) return "#ddaa00";
 	if (selected) return "#ffcc00";
 	if (highlighted) return "#cacaca";
 	return "white";
@@ -103,8 +105,7 @@ export default function Home() {
 						onClick={() => nounClicked(noun)}
 						style={{
 							background: getBackgroundColor(
-								noun.name === selectedNoun.value?.name
-									|| noun.name === selected2Noun.value?.name,
+								selectedNouns.value?.map(n => n?.name).includes(noun.name) ?? false,
 								noun.name === highlighted.value?.name
 							)
 						}}>
